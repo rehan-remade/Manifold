@@ -18,6 +18,7 @@ Manifold is a Next.js application that streams and visualizes 3D voxel data in r
 - **🔷 Mesh Preview** — Instant vertex-colored mesh preview before final export
 - **💾 GLB Export** — Download the final textured 3D model
 - **🖼️ Image Generation** — Generate input images from text prompts via fal.ai
+- **🧠 Smart Prompt Enhancement** — Groq LLM enhances prompts for optimal 3D reconstruction
 - **🎮 ViewCube Navigation** — Fusion 360-style camera controller
 - **📊 Live Logs** — Streaming log panel for debugging
 
@@ -80,6 +81,7 @@ Create `frontend/.env.local`:
 ```env
 NEXT_PUBLIC_FAL_API_KEY=your_fal_api_key_here
 NEXT_PUBLIC_FAL_ENDPOINT_ID=your_deployed_endpoint_id
+NEXT_PUBLIC_GROQ_API_KEY=your_groq_api_key_here  # Optional, for prompt enhancement
 ```
 
 ### 4. Start the development server
@@ -163,8 +165,11 @@ git submodule update --remote sam-3d
 |----------|-------------|
 | `NEXT_PUBLIC_FAL_API_KEY` | Your fal.ai API key |
 | `NEXT_PUBLIC_FAL_ENDPOINT_ID` | Deployed SAM-3D endpoint ID |
+| `NEXT_PUBLIC_GROQ_API_KEY` | (Optional) Groq API key for prompt enhancement |
 
-Get your API key at [fal.ai/dashboard](https://fal.ai/dashboard)
+Get your fal.ai API key at [fal.ai/dashboard](https://fal.ai/dashboard)
+
+Get your Groq API key at [console.groq.com](https://console.groq.com)
 
 ---
 
@@ -176,7 +181,7 @@ frontend/
 │   ├── page.tsx              # Main orchestrator, layout, state
 │   ├── components/
 │   │   ├── VoxelViewer.tsx   # 3D rendering (voxels, mesh, GLB)
-│   │   ├── BottomToolbar.tsx # Chat-style input bar
+│   │   ├── BottomToolbar.tsx # Chat-style input bar + prompt enhancement
 │   │   ├── ViewCube.tsx      # Interactive camera cube
 │   │   └── LogPanel.tsx      # Streaming logs drawer
 │   ├── hooks/
@@ -184,7 +189,8 @@ frontend/
 │   └── lib/
 │       ├── types.ts          # TypeScript interfaces
 │       ├── decoders.ts       # Base64 binary decoders
-│       └── constants.ts      # Stage colors, defaults
+│       ├── constants.ts      # Stage colors, defaults
+│       └── groq.ts           # Groq LLM prompt enhancement
 └── public/
     └── logo.png              # Manifold logo
 ```
@@ -218,6 +224,24 @@ curl -X POST "https://fal.run/YOUR_ENDPOINT_ID/stream" \
 ---
 
 ## 🎨 Technical Notes
+
+### Prompt Enhancement (Groq)
+When a Groq API key is provided, user prompts are enhanced before image generation:
+
+```
+User: "a cool sneaker"
+        ↓
+   [Groq LLM - llama-3.3-70b] (~100ms)
+        ↓
+{
+  imagePrompt: "A single modern sneaker, centered on pure white background,
+                studio lighting, soft shadows, product photography, 4K"
+  segmentationPrompt: "sneaker"
+}
+```
+
+- **imagePrompt**: Optimized for z-image generation with clean backgrounds
+- **segmentationPrompt**: Simple object label for SAM-3D segmentation
 
 ### Coordinate Systems
 - **SAM-3D**: Z-up coordinate system

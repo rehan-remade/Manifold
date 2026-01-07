@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import { fal } from "@fal-ai/client";
 import type { StreamConfig, RenderMode, MeshData } from "../lib/types";
+import { enhancePromptWithGroq, type EnhancedPrompts } from "../lib/groq";
 
 interface BottomToolbarProps {
   isStreaming: boolean;
@@ -37,10 +38,12 @@ export default function BottomToolbar({
   const [uploadedImagePreview, setUploadedImagePreview] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isEnhancingPrompt, setIsEnhancingPrompt] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const endpointId = process.env.NEXT_PUBLIC_FAL_ENDPOINT_ID || "";
   const apiKey = process.env.NEXT_PUBLIC_FAL_API_KEY || "";
+  const groqApiKey = process.env.NEXT_PUBLIC_GROQ_API_KEY || "";
 
   const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -75,13 +78,31 @@ export default function BottomToolbar({
     if (!prompt.trim()) return;
 
     let imageUrl = uploadedImageUrl;
+    let finalPrompts: EnhancedPrompts = {
+      imagePrompt: prompt,
+      segmentationPrompt: prompt,
+    };
 
+    // Step 1: Enhance prompt with Groq (only if generating image and Groq key available)
+    if (!imageUrl && groqApiKey) {
+      setIsEnhancingPrompt(true);
+      try {
+        finalPrompts = await enhancePromptWithGroq(prompt, groqApiKey);
+        console.log("Enhanced prompts:", finalPrompts);
+      } catch (error) {
+        console.error("Failed to enhance prompt:", error);
+        // Continue with original prompt on failure
+      }
+      setIsEnhancingPrompt(false);
+    }
+
+    // Step 2: Generate image if needed
     if (!imageUrl) {
       setIsGeneratingImage(true);
       try {
         const result = await fal.subscribe("fal-ai/z-image/turbo", {
           input: {
-            prompt: prompt,
+            prompt: finalPrompts.imagePrompt, // Use enhanced prompt for image gen
             image_size: "square_hd",
             num_inference_steps: 8,
             num_images: 1,
@@ -107,15 +128,16 @@ export default function BottomToolbar({
 
     if (!imageUrl) return;
 
+    // Step 3: Start SAM-3D with segmentation prompt
     onStart({
       endpointId,
       apiKey,
       imageUrl,
-      prompt,
+      prompt: finalPrompts.segmentationPrompt, // Use segmentation prompt for SAM-3D
     });
-  }, [prompt, uploadedImageUrl, endpointId, apiKey, onStart]);
+  }, [prompt, uploadedImageUrl, endpointId, apiKey, groqApiKey, onStart]);
 
-  const isProcessing = isStreaming || isGeneratingImage || isUploading;
+  const isProcessing = isStreaming || isGeneratingImage || isUploading || isEnhancingPrompt;
 
   const isComplete = glbUrl && !isProcessing;
 
@@ -192,7 +214,11 @@ export default function BottomToolbar({
                 <div className="flex items-center gap-1.5 text-xs text-zinc-500">
                   <div className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-pulse" />
                   <span>
-                    {isGeneratingImage ? "generating" : currentStage?.replace("_", " ") || "processing"}
+                    {isEnhancingPrompt 
+                      ? "enhancing" 
+                      : isGeneratingImage 
+                        ? "generating" 
+                        : currentStage?.replace("_", " ") || "processing"}
                   </span>
                   {isStreaming && <span>{Math.round(progress)}%</span>}
                 </div>
