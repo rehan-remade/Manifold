@@ -5,7 +5,9 @@
 
 **Real-time text-to-3D and image-to-3D diffusion with live streaming, powered by [fal.ai](https://fal.ai)**
 
-Manifold lets you turn text prompts or images into 3D models using SAM-3d-objects 3D diffusion, streaming every step as it’s generated. See your ideas take shape as voxels, meshes, and textures—all in an interactive, immersive viewer.
+Manifold lets you turn text prompts or images into 3D models using SAM-3d-objects 3D diffusion, streaming every step as it's generated. See your ideas take shape as voxels, meshes, and textures—all in an interactive, immersive viewer.
+
+https://github.com/rehan-remade/Manifold/raw/main/assets/demo.mp4
 
 ---
 
