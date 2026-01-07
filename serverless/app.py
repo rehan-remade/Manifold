@@ -28,8 +28,8 @@ ENV TZ=Etc/UTC DEBIAN_FRONTEND=noninteractive
 ENV PYOPENGL_PLATFORM=osmesa
 
 RUN apt-get update && apt-get install -y --no-install-recommends software-properties-common && \
-    add-apt-repository -y ppa:deadsnakes/ppa && apt-get update && \
-    apt-get install -y --no-install-recommends \
+    add-apt-repository -y ppa:deadsnakes/ppa && \
+    apt-get update && apt-get install -y --fix-missing --no-install-recommends \
         python3.11 python3.11-dev python3.11-distutils python3.11-venv python3-pybind11 \
         build-essential cmake ninja-build curl git ca-certificates \
         libgl1 libglib2.0-0 libsm6 libxext6 libglew-dev libopenexr-dev libboost-all-dev \
@@ -54,7 +54,7 @@ RUN pip install --no-cache-dir opencv-python setuptools==69.5.1 matplotlib einop
 
 # Clone forked sam-3d-objects with streaming callback support
 # Cache bust: change this value to force re-clone
-ARG SAM3D_CACHE_BUST=v9
+ARG SAM3D_CACHE_BUST=v10
 RUN git clone https://github.com/rehan-remade/sam-3d-objects.git && cd sam-3d-objects && \
     grep -Ev '^(torch|torchvision|torchaudio|pytorch3d|nvidia-|numpy|scipy|blinker)' requirements.txt > /tmp/reqs.txt && \
     pip install --no-cache-dir -r /tmp/reqs.txt && pip install -e . --no-deps
@@ -380,14 +380,11 @@ class SAM3DStreamApp(
                             return
 
                     coords_np = None
-                    colors_list = None
                     if coords is not None and len(coords) > 0:
                         coords_np = coords.cpu().numpy() if hasattr(coords, "cpu") else np.array(coords)
-                        if colors is not None:
-                            colors_list = colors.cpu().numpy().tolist() if hasattr(colors, "cpu") else colors.tolist()
 
                     progress = 0.05 + (step / total_steps) * 0.45
-                    voxel_data, bounds_min, bounds_max = encode_voxels_binary(coords_np, colors_list)
+                    voxel_data, bounds_min, bounds_max = encode_voxels_binary(coords_np, None)
 
                     progress_queue.put({
                         "stage": "geometry",
