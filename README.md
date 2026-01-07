@@ -92,26 +92,21 @@ Then update `FAL_ENDPOINT_ID` in `.env.local` with your new endpoint ID.
 ## 📁 Project Structure
 
 ```
-frontend/
-├── app/
-│   ├── page.tsx              # Main orchestrator, layout, state
-│   ├── api/
-│   │   ├── fal/proxy/        # fal.ai secure proxy (handles API key)
-│   │   ├── enhance-prompt/   # Groq LLM prompt enhancement
-│   │   └── stream-3d/        # SSE proxy for SAM-3D
-│   ├── components/
-│   │   ├── VoxelViewer.tsx   # 3D rendering (voxels, mesh, GLB)
-│   │   ├── BottomToolbar.tsx # Chat-style input bar
-│   │   ├── ViewCube.tsx      # Interactive camera cube
-│   │   └── LogPanel.tsx      # Streaming logs drawer
-│   ├── hooks/
-│   │   └── useSAM3DStream.ts # SSE streaming logic
-│   └── lib/
-│       ├── types.ts          # TypeScript interfaces
-│       ├── decoders.ts       # Base64 binary decoders
-│       └── constants.ts      # Stage colors, defaults
-└── public/
-    └── logo.png              # Manifold logo
+manifold/
+├── frontend/                 # Next.js web application
+│   ├── app/
+│   │   ├── page.tsx          # Main orchestrator
+│   │   ├── api/              # Server-side API routes
+│   │   ├── components/       # React Three Fiber components
+│   │   ├── hooks/            # useSAM3DStream SSE hook
+│   │   └── lib/              # Types, decoders, constants
+│   └── public/
+│
+├── serverless/               # fal.ai serverless endpoint
+│   ├── app.py                # SAM-3D streaming endpoint
+│   └── pyproject.toml        # fal app config
+│
+└── sam-3d/                   # Git submodule (forked SAM-3D Objects)
 ```
 
 
