@@ -260,39 +260,6 @@ export default function BottomToolbar({
                 className="flex-1 bg-transparent border-none outline-none text-sm text-zinc-100 placeholder:text-zinc-600 disabled:opacity-50 resize-none leading-relaxed py-1.5 min-h-[28px] max-h-[120px]"
               />
 
-              {/* Status */}
-              {isProcessing && (
-                <div className="flex items-center gap-1.5 text-xs text-zinc-500">
-                  <div className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-pulse" />
-                  <span>
-                    {isEnhancingPrompt 
-                      ? "analyzing" 
-                      : isGeneratingImage 
-                        ? (imageGenStatus === "queued" ? "queued" : "generating")
-                        : currentStage?.replace("_", " ") || "processing"}
-                  </span>
-                  {isStreaming && <span>{Math.round(progress)}%</span>}
-                </div>
-              )}
-
-              {/* Completed status with download */}
-              {isComplete && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-zinc-500">completed</span>
-                  <a
-                    href={glbUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center w-6 h-6 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition-colors"
-                    title="Download GLB"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                  </a>
-                </div>
-              )}
-
               {/* Logs button */}
               <button
                 type="button"
@@ -345,12 +312,41 @@ export default function BottomToolbar({
           )}
         </div>
 
-        {/* Helper text */}
-        {!isProcessing && !hasUploadedImage && (
-          <p className="text-[10px] text-zinc-700 text-center mt-2">
-            upload an image or describe what you want · enter to submit · shift+enter for new line
-          </p>
-        )}
+        {/* Status text below toolbar */}
+        <div className="h-5 mt-2 flex items-center justify-center">
+          {isProcessing ? (
+            <div className="flex items-center gap-1.5 text-[10px] text-zinc-500">
+              <div className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-pulse" />
+              <span>
+                {isEnhancingPrompt 
+                  ? "analyzing prompt..." 
+                  : isGeneratingImage 
+                    ? (imageGenStatus === "queued" ? "queued..." : "generating image...")
+                    : currentStage?.replace("_", " ") || "processing..."}
+              </span>
+              {isStreaming && <span className="tabular-nums">{Math.round(progress)}%</span>}
+            </div>
+          ) : isComplete ? (
+            <div className="flex items-center gap-1.5 text-[10px] text-zinc-500">
+              <span>completed</span>
+              <a
+                href={glbUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center text-zinc-400 hover:text-zinc-200 transition-colors"
+                title="Download GLB"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+              </a>
+            </div>
+          ) : !hasUploadedImage ? (
+            <p className="text-[10px] text-zinc-700">
+              upload an image or describe what you want · enter to submit · shift+enter for new line
+            </p>
+          ) : null}
+        </div>
       </form>
     </div>
   );
