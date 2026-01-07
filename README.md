@@ -7,7 +7,7 @@
 
 Manifold lets you turn text prompts or images into 3D models using SAM-3d-objects 3D diffusion, streaming every step as it's generated. See your ideas take shape as voxels, meshes, and textures—all in an interactive, immersive viewer.
 
-https://github.com/rehan-remade/Manifold/raw/main/assets/demo.mp4
+https://github.com/rehan-remade/Manifold/raw/master/assets/demo.mp4
 
 ---
 
