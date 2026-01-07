@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@fal-ai/client": "^1.7.2",
+    "@fal-ai/server-proxy": "^1.1.2",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.4.2",
     "next": "16.0.10",

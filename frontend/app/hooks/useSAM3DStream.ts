@@ -6,11 +6,9 @@ import type {
   MeshData,
   LogEntry,
   RenderMode,
-  StreamConfig,
   StreamEvent,
 } from "../lib/types";
 import { decodeVoxels, decodeMesh, decodeGLB } from "../lib/decoders";
-import { FAL_API_BASE_URL } from "../lib/constants";
 
 export interface UseSAM3DStreamReturn {
   // State
@@ -25,7 +23,7 @@ export interface UseSAM3DStreamReturn {
   splatUrl: string | null;
   renderMode: RenderMode;
   // Actions
-  startStream: (config: StreamConfig) => Promise<void>;
+  startStream: (imageUrl: string, prompt: string) => Promise<void>;
   cancelStream: () => void;
   clearState: () => void;
 }
@@ -79,19 +77,7 @@ export function useSAM3DStream(): UseSAM3DStreamReturn {
   }, []);
 
   const startStream = useCallback(
-    async (config: StreamConfig) => {
-      const { endpointId, apiKey, imageUrl, prompt } = config;
-
-      if (!endpointId.trim()) {
-        addLog("error", "Please enter an endpoint ID", "error");
-        return;
-      }
-
-      if (!apiKey.trim()) {
-        addLog("error", "Please enter your FAL API key", "error");
-        return;
-      }
-
+    async (imageUrl: string, prompt: string) => {
       // Reset state
       clearState();
       setIsStreaming(true);
@@ -101,27 +87,23 @@ export function useSAM3DStream(): UseSAM3DStreamReturn {
       abortControllerRef.current = new AbortController();
 
       try {
-        const response = await fetch(
-          `${FAL_API_BASE_URL}/${endpointId}/stream`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Key ${apiKey}`,
-            },
-            body: JSON.stringify({
-              image_url: imageUrl,
-              prompt: prompt,
-              stream_geometry_every: config.streamGeometryEvery ?? 1,
-              stream_colors_every: config.streamColorsEvery ?? 2,
-            }),
-            signal: abortControllerRef.current.signal,
-          }
-        );
+        const response = await fetch("/api/stream-3d", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            imageUrl,
+            prompt,
+            streamGeometryEvery: 1,
+            streamColorsEvery: 2,
+          }),
+          signal: abortControllerRef.current.signal,
+        });
 
         if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`HTTP ${response.status}: ${errorText}`);
+          const errorData = await response.json();
+          throw new Error(errorData.error || `HTTP ${response.status}`);
         }
 
         if (!response.body) {
@@ -160,7 +142,7 @@ export function useSAM3DStream(): UseSAM3DStreamReturn {
                     setRenderMode("voxels");
                     addLog(
                       stage,
-                      `Step ${e.step}/${e.total_steps}: ${decoded.length} voxels (${e.color_quality})`,
+                      `Step ${e.step}/${e.total_steps}: ${decoded.length} voxels`,
                       "data"
                     );
                   }
@@ -250,4 +232,3 @@ export function useSAM3DStream(): UseSAM3DStreamReturn {
     clearState,
   };
 }
-

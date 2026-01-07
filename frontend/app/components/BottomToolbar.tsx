@@ -2,25 +2,21 @@
 
 import { useState, useRef, useCallback } from "react";
 import { fal } from "@fal-ai/client";
-import type { StreamConfig, RenderMode, MeshData } from "../lib/types";
-import { enhancePromptWithGroq, type EnhancedPrompts } from "../lib/groq";
+
+// Configure fal to use our proxy
+fal.config({
+  proxyUrl: "/api/fal/proxy",
+});
 
 interface BottomToolbarProps {
   isStreaming: boolean;
   progress: number;
   currentStage: string;
   glbUrl: string | null;
-  onStart: (config: StreamConfig) => void;
+  onStart: (imageUrl: string, prompt: string) => void;
   onCancel: () => void;
   onOpenLogs: () => void;
   logCount: number;
-}
-
-// Configure fal client with API key from env
-if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_FAL_API_KEY) {
-  fal.config({
-    credentials: process.env.NEXT_PUBLIC_FAL_API_KEY,
-  });
 }
 
 export default function BottomToolbar({
@@ -34,16 +30,13 @@ export default function BottomToolbar({
   logCount,
 }: BottomToolbarProps) {
   const [prompt, setPrompt] = useState("");
+  // User-uploaded image (for image-to-3D flow)
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [uploadedImagePreview, setUploadedImagePreview] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isEnhancingPrompt, setIsEnhancingPrompt] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const endpointId = process.env.NEXT_PUBLIC_FAL_ENDPOINT_ID || "";
-  const apiKey = process.env.NEXT_PUBLIC_FAL_API_KEY || "";
-  const groqApiKey = process.env.NEXT_PUBLIC_GROQ_API_KEY || "";
 
   const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -77,69 +70,96 @@ export default function BottomToolbar({
     
     if (!prompt.trim()) return;
 
-    let imageUrl = uploadedImageUrl;
-    let finalPrompts: EnhancedPrompts = {
-      imagePrompt: prompt,
-      segmentationPrompt: prompt,
-    };
+    const hasUploadedImage = !!uploadedImageUrl;
 
-    // Step 1: Enhance prompt with Groq (only if generating image and Groq key available)
-    if (!imageUrl && groqApiKey) {
+    // === IMAGE-TO-3D FLOW ===
+    if (hasUploadedImage) {
       setIsEnhancingPrompt(true);
-      try {
-        finalPrompts = await enhancePromptWithGroq(prompt, groqApiKey);
-        console.log("Enhanced prompts:", finalPrompts);
-      } catch (error) {
-        console.error("Failed to enhance prompt:", error);
-        // Continue with original prompt on failure
-      }
-      setIsEnhancingPrompt(false);
-    }
+      let segmentationPrompt = prompt;
 
-    // Step 2: Generate image if needed
-    if (!imageUrl) {
-      setIsGeneratingImage(true);
       try {
-        const result = await fal.subscribe("fal-ai/z-image/turbo", {
-          input: {
-            prompt: finalPrompts.imagePrompt, // Use enhanced prompt for image gen
-            image_size: "square_hd",
-            num_inference_steps: 8,
-            num_images: 1,
-            enable_safety_checker: true,
-          },
+        // Use VLM to analyze uploaded image + user text
+        const response = await fetch("/api/enhance-prompt", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            prompt, 
+            imageUrl: uploadedImageUrl 
+          }),
         });
         
-        const data = result.data as { images: Array<{ url: string }> };
-        if (data.images?.[0]?.url) {
-          imageUrl = data.images[0].url;
-          setUploadedImageUrl(imageUrl);
-          setUploadedImagePreview(imageUrl);
-        } else {
-          throw new Error("No image generated");
+        if (response.ok) {
+          const data = await response.json();
+          segmentationPrompt = data.segmentationPrompt || prompt;
+          console.log("VLM segmentation prompt:", segmentationPrompt);
         }
       } catch (error) {
-        console.error("Failed to generate image:", error);
-        setIsGeneratingImage(false);
-        return;
+        console.error("Failed to analyze image:", error);
       }
-      setIsGeneratingImage(false);
+      
+      setIsEnhancingPrompt(false);
+      onStart(uploadedImageUrl, segmentationPrompt);
+      return;
     }
 
-    if (!imageUrl) return;
+    // === TEXT-TO-3D FLOW ===
+    setIsEnhancingPrompt(true);
+    let imagePrompt = prompt;
+    let segmentationPrompt = prompt;
 
-    // Step 3: Start SAM-3D with segmentation prompt
-    onStart({
-      endpointId,
-      apiKey,
-      imageUrl,
-      prompt: finalPrompts.segmentationPrompt, // Use segmentation prompt for SAM-3D
-    });
-  }, [prompt, uploadedImageUrl, endpointId, apiKey, groqApiKey, onStart]);
+    try {
+      // Use LLM to enhance prompt for image gen + get seg prompt
+      const response = await fetch("/api/enhance-prompt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        imagePrompt = data.imagePrompt || prompt;
+        segmentationPrompt = data.segmentationPrompt || prompt;
+        console.log("Enhanced prompts:", { imagePrompt, segmentationPrompt });
+      }
+    } catch (error) {
+      console.error("Failed to enhance prompt:", error);
+    }
+    setIsEnhancingPrompt(false);
+
+    // Generate image (don't show preview - it's intermediate)
+    setIsGeneratingImage(true);
+    let generatedImageUrl: string | null = null;
+    
+    try {
+      const result = await fal.subscribe("fal-ai/z-image/turbo", {
+        input: {
+          prompt: imagePrompt,
+          image_size: "square_hd",
+          num_inference_steps: 8,
+          num_images: 1,
+          enable_safety_checker: true,
+        },
+      });
+      
+      generatedImageUrl = result.data?.images?.[0]?.url || null;
+      
+      if (!generatedImageUrl) {
+        throw new Error("No image URL returned");
+      }
+    } catch (error) {
+      console.error("Failed to generate image:", error);
+      setIsGeneratingImage(false);
+      return;
+    }
+    setIsGeneratingImage(false);
+
+    // Start SAM-3D with generated image
+    onStart(generatedImageUrl, segmentationPrompt);
+  }, [prompt, uploadedImageUrl, onStart]);
 
   const isProcessing = isStreaming || isGeneratingImage || isUploading || isEnhancingPrompt;
-
   const isComplete = glbUrl && !isProcessing;
+  const hasUploadedImage = !!uploadedImageUrl;
 
   return (
     <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-lg px-4">
@@ -147,7 +167,7 @@ export default function BottomToolbar({
         <div className="flex items-end gap-2">
           {/* Input container with image preview */}
           <div className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-            {/* Image preview - inside input, expands upward */}
+            {/* Image preview - only for user uploads */}
             {uploadedImagePreview && (
               <div className="p-2 pb-0">
                 <div className="relative inline-block">
@@ -204,7 +224,7 @@ export default function BottomToolbar({
                 type="text"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder={uploadedImageUrl ? "Describe the object..." : "Describe what to create..."}
+                placeholder={hasUploadedImage ? "What to extract? (optional)" : "Describe what to create..."}
                 disabled={isProcessing}
                 className="flex-1 bg-transparent border-none outline-none text-sm text-zinc-100 placeholder:text-zinc-600 disabled:opacity-50"
               />
@@ -215,7 +235,7 @@ export default function BottomToolbar({
                   <div className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-pulse" />
                   <span>
                     {isEnhancingPrompt 
-                      ? "enhancing" 
+                      ? "analyzing" 
                       : isGeneratingImage 
                         ? "generating" 
                         : currentStage?.replace("_", " ") || "processing"}
@@ -284,7 +304,7 @@ export default function BottomToolbar({
           ) : (
             <button
               type="submit"
-              disabled={!prompt.trim()}
+              disabled={!prompt.trim() && !hasUploadedImage}
               className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-zinc-100 text-zinc-900 hover:bg-white disabled:bg-zinc-800 disabled:text-zinc-600 rounded-xl transition-colors"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -295,7 +315,7 @@ export default function BottomToolbar({
         </div>
 
         {/* Helper text */}
-        {!isProcessing && !uploadedImageUrl && (
+        {!isProcessing && !hasUploadedImage && (
           <p className="text-[10px] text-zinc-700 text-center mt-2">
             upload an image or describe what you want
           </p>

@@ -79,10 +79,12 @@ npm install   # or pnpm install
 
 Create `frontend/.env.local`:
 ```env
-NEXT_PUBLIC_FAL_API_KEY=your_fal_api_key_here
-NEXT_PUBLIC_FAL_ENDPOINT_ID=your_deployed_endpoint_id
-NEXT_PUBLIC_GROQ_API_KEY=your_groq_api_key_here  # Optional, for prompt enhancement
+FAL_KEY=your_fal_api_key_here
+FAL_ENDPOINT_ID=your_deployed_endpoint_id
+GROQ_API_KEY=your_groq_api_key_here  # Optional, for prompt enhancement
 ```
+
+> **Note:** All API keys are server-side only (no `NEXT_PUBLIC_` prefix) for security.
 
 ### 4. Start the development server
 
@@ -163,9 +165,11 @@ git submodule update --remote sam-3d
 
 | Variable | Description |
 |----------|-------------|
-| `NEXT_PUBLIC_FAL_API_KEY` | Your fal.ai API key |
-| `NEXT_PUBLIC_FAL_ENDPOINT_ID` | Deployed SAM-3D endpoint ID |
-| `NEXT_PUBLIC_GROQ_API_KEY` | (Optional) Groq API key for prompt enhancement |
+| `FAL_KEY` | Your fal.ai API key (server-side only) |
+| `FAL_ENDPOINT_ID` | Deployed SAM-3D endpoint ID |
+| `GROQ_API_KEY` | (Optional) Groq API key for prompt enhancement |
+
+> All keys are server-side only for security — never exposed to the browser.
 
 Get your fal.ai API key at [fal.ai/dashboard](https://fal.ai/dashboard)
 
@@ -179,9 +183,13 @@ Get your Groq API key at [console.groq.com](https://console.groq.com)
 frontend/
 ├── app/
 │   ├── page.tsx              # Main orchestrator, layout, state
+│   ├── api/
+│   │   ├── fal/proxy/        # fal.ai secure proxy (handles API key)
+│   │   ├── enhance-prompt/   # Groq LLM prompt enhancement
+│   │   └── stream-3d/        # SSE proxy for SAM-3D
 │   ├── components/
 │   │   ├── VoxelViewer.tsx   # 3D rendering (voxels, mesh, GLB)
-│   │   ├── BottomToolbar.tsx # Chat-style input bar + prompt enhancement
+│   │   ├── BottomToolbar.tsx # Chat-style input bar
 │   │   ├── ViewCube.tsx      # Interactive camera cube
 │   │   └── LogPanel.tsx      # Streaming logs drawer
 │   ├── hooks/
@@ -189,8 +197,7 @@ frontend/
 │   └── lib/
 │       ├── types.ts          # TypeScript interfaces
 │       ├── decoders.ts       # Base64 binary decoders
-│       ├── constants.ts      # Stage colors, defaults
-│       └── groq.ts           # Groq LLM prompt enhancement
+│       └── constants.ts      # Stage colors, defaults
 └── public/
     └── logo.png              # Manifold logo
 ```
