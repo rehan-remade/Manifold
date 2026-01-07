@@ -1,46 +1,22 @@
-# 🌀 Manifold
-
-**Real-time 3D reconstruction from a single image, powered by [fal.ai](https://fal.ai)**
-
-Manifold is a Next.js application that streams and visualizes 3D voxel data in real-time using SAM-3D. Watch as your 2D images transform into 3D models through an immersive, live visualization of the diffusion process.
 
 <p align="center">
   <img src="frontend/public/logo.png" alt="Manifold Logo" width="300" />
 </p>
 
----
+**Real-time text-to-3D and image-to-3D diffusion with live streaming, powered by [fal.ai](https://fal.ai)**
 
-## ✨ Features
-
-- **🎬 Real-Time Streaming** — Watch the 3D reconstruction happen live with SSE streaming
-- **📦 Voxel Visualization** — See geometry emerge voxel-by-voxel during diffusion
-- **🎨 Color Evolution** — Watch appearance diffusion paint the model in real-time
-- **🔷 Mesh Preview** — Instant vertex-colored mesh preview before final export
-- **💾 GLB Export** — Download the final textured 3D model
-- **🖼️ Image Generation** — Generate input images from text prompts via fal.ai
-- **🧠 Smart Prompt Enhancement** — Groq LLM enhances prompts for optimal 3D reconstruction
-- **🎮 ViewCube Navigation** — Fusion 360-style camera controller
-- **📊 Live Logs** — Streaming log panel for debugging
+Manifold lets you turn text prompts or images into 3D models using SAM-3d-objects 3D diffusion, streaming every step as it’s generated. See your ideas take shape as voxels, meshes, and textures—all in an interactive, immersive viewer.
 
 ---
 
-## 🏗️ Architecture
+## How It Works
 
-```
-manifold/
-├── frontend/           # Next.js web application
-│   ├── app/
-│   │   ├── components/ # React components (VoxelViewer, ViewCube, etc.)
-│   │   ├── hooks/      # Custom hooks (useSAM3DStream)
-│   │   └── lib/        # Types, decoders, constants
-│   └── public/         # Static assets
-│
-├── serverless/         # fal.ai serverless endpoint
-│   ├── app.py          # SAM-3D streaming endpoint
-│   └── pyproject.toml  # fal app configuration & dependencies
-│
-└── sam-3d/             # Git submodule - forked SAM-3D Objects repo
-```
+1. **Prompt Enhancement** — Groq LLM (`llama-3.3-70b`) rewrites your text into an optimized image prompt + segmentation label
+2. **Image Generation** — `fal-ai/z-image/turbo` generates a 3D-ready image in ~1s
+3. **3D Reconstruction** — SAM-3D runs geometry and appearance diffusion on H100, streaming voxel data via SSE callbacks at each denoising step
+4. **Live Visualization** — React Three Fiber renders voxels/mesh/GLB in real-time as data streams in
+
+For image-to-3D, Groq's vision model (`llama-4-scout`) analyzes the uploaded image to generate the segmentation prompt.
 
 ---
 
@@ -59,13 +35,8 @@ manifold/
 ### 1. Clone the repository
 
 ```bash
-git clone --recurse-submodules https://github.com/YOUR_USERNAME/manifold.git
+git clone --recurse-submodules https://github.com/rehan-remade/Manifold.git
 cd manifold
-```
-
-If you already cloned without submodules:
-```bash
-git submodule update --init --recursive
 ```
 
 ### 2. Set up the frontend
@@ -80,11 +51,11 @@ npm install   # or pnpm install
 Create `frontend/.env.local`:
 ```env
 FAL_KEY=your_fal_api_key_here
-FAL_ENDPOINT_ID=your_deployed_endpoint_id
+FAL_ENDPOINT_ID=rehan/sam-3d-stream
 GROQ_API_KEY=your_groq_api_key_here  # Optional, for prompt enhancement
 ```
 
-> **Note:** All API keys are server-side only (no `NEXT_PUBLIC_` prefix) for security.
+> **Note:** You can use `rehan/sam-3d-stream` directly, or [deploy your own](#deploy-your-own-endpoint) and update the endpoint ID.
 
 ### 4. Start the development server
 
@@ -96,37 +67,9 @@ Open [http://localhost:3000](http://localhost:3000) 🎉
 
 ---
 
-## 🔧 Detailed Setup
+### Deploy Your Own Endpoint
 
-### Frontend
-
-The frontend is a Next.js 14+ application with React Three Fiber for 3D rendering.
-
-```bash
-cd frontend
-npm install
-npm run dev     # Development
-npm run build   # Production build
-npm run start   # Production server
-```
-
-**Key dependencies:**
-- `@react-three/fiber` — React renderer for Three.js
-- `@react-three/drei` — Useful Three.js helpers
-- `three` — 3D graphics library
-- `@fal-ai/client` — fal.ai SDK for API calls
-
-### Serverless Backend
-
-The `serverless/app.py` is a fal.ai serverless function that:
-1. Accepts an image URL and optional prompts
-2. Runs SAM-3D reconstruction on H100 GPU
-3. Streams voxel/mesh data via Server-Sent Events (SSE)
-4. Returns final GLB and Gaussian splat files
-
-The project uses `pyproject.toml` for configuration, following fal's internal registry pattern.
-
-**Deploying to fal.ai:**
+Want to customize the SAM-3D backend? Deploy your own:
 
 ```bash
 # Install fal CLI
@@ -134,46 +77,11 @@ pip install fal
 
 # Login to fal
 fal auth login
-
-# Deploy using pyproject.toml
 cd serverless
 fal deploy sam-3d-stream
 ```
 
-The app is defined in `pyproject.toml` under `[tool.fal.apps]`:
-```toml
-[tool.fal.apps]
-sam-3d-stream = { auth = "shared", ref = "app.py::SAM3DStreamApp" }
-```
-
-After deployment, copy the endpoint ID and add it to your frontend `.env.local`.
-
-### SAM-3D Submodule
-
-The `sam-3d/` directory is a Git submodule pointing to a [forked SAM-3D Objects repository](https://github.com/rehan-remade/sam-3d-objects) with streaming callback support.
-
-**Updating the submodule:**
-```bash
-git submodule update --remote sam-3d
-```
-
----
-
-## 🔐 Environment Variables
-
-### Frontend (`frontend/.env.local`)
-
-| Variable | Description |
-|----------|-------------|
-| `FAL_KEY` | Your fal.ai API key (server-side only) |
-| `FAL_ENDPOINT_ID` | Deployed SAM-3D endpoint ID |
-| `GROQ_API_KEY` | (Optional) Groq API key for prompt enhancement |
-
-> All keys are server-side only for security — never exposed to the browser.
-
-Get your fal.ai API key at [fal.ai/dashboard](https://fal.ai/dashboard)
-
-Get your Groq API key at [console.groq.com](https://console.groq.com)
+Then update `FAL_ENDPOINT_ID` in `.env.local` with your new endpoint ID.
 
 ---
 
@@ -202,99 +110,6 @@ frontend/
     └── logo.png              # Manifold logo
 ```
 
----
-
-## 🛠️ Development
-
-### Frontend Development
-
-```bash
-cd frontend
-npm run dev
-```
-
-- Hot reload enabled
-- View at `http://localhost:3000`
-- Linting: `npm run lint`
-
-### Testing the Streaming Endpoint
-
-You can test the fal endpoint directly:
-
-```bash
-curl -X POST "https://fal.run/YOUR_ENDPOINT_ID/stream" \
-  -H "Authorization: Key $FAL_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"image_url": "https://example.com/image.jpg", "prompt": "car"}'
-```
-
----
-
-## 🎨 Technical Notes
-
-### Prompt Enhancement (Groq)
-When a Groq API key is provided, user prompts are enhanced before image generation:
-
-```
-User: "a cool sneaker"
-        ↓
-   [Groq LLM - llama-3.3-70b] (~100ms)
-        ↓
-{
-  imagePrompt: "A single modern sneaker, centered on pure white background,
-                studio lighting, soft shadows, product photography, 4K"
-  segmentationPrompt: "sneaker"
-}
-```
-
-- **imagePrompt**: Optimized for z-image generation with clean backgrounds
-- **segmentationPrompt**: Simple object label for SAM-3D segmentation
-
-### Coordinate Systems
-- **SAM-3D**: Z-up coordinate system
-- **Three.js**: Y-up coordinate system
-- Mesh previews are converted; GLB files are native Y-up
-
-### Object Placement
-All models are positioned with their bottom on the grid (y=0)
-
-### Camera Controls
-- **OrbitControls**: Rotate and zoom (no panning)
-- **ViewCube**: Click faces/edges/corners for preset views; drag to rotate
-
-### Streaming Protocol
-The endpoint uses SSE with these event stages:
-1. `loading` → `preprocessing`
-2. `geometry` (voxels during geometry diffusion)
-3. `appearance` (colored voxels during appearance diffusion)
-4. `mesh_preview` (vertex-colored mesh)
-5. `glb_ready` (final textured model)
-6. `complete` (file URLs)
-
----
-
-## 🚢 Deployment
-
-### Frontend (Vercel)
-
-```bash
-cd frontend
-vercel
-```
-
-Or connect your GitHub repo to Vercel for automatic deployments.
-
-### Serverless Backend (fal.ai)
-
-```bash
-cd serverless
-fal deploy sam-3d-stream
-```
-
-The endpoint runs on H100 GPUs with:
-- 600s keep-alive
-- 300s request timeout
-- Auto-scaling (0 to 1 instances)
 
 ---
 
@@ -305,20 +120,6 @@ The endpoint runs on H100 GPUs with:
 3. Commit your changes: `git commit -m 'Add amazing feature'`
 4. Push to the branch: `git push origin feature/amazing-feature`
 5. Open a Pull Request
-
----
-
-## 📜 License
-
-This project builds on [SAM-3D Objects](https://github.com/pku-yuangroup/SAM-3D-Objects). Please refer to the original license in `sam-3d/LICENSE`.
-
----
-
-## 🙏 Acknowledgments
-
-- **[SAM-3D](https://github.com/pku-yuangroup/SAM-3D-Objects)** — The 3D reconstruction model
-- **[fal.ai](https://fal.ai)** — Serverless GPU infrastructure
-- **[Three.js](https://threejs.org)** & **[React Three Fiber](https://r3f.docs.pmnd.rs)** — 3D rendering
 
 ---
 
