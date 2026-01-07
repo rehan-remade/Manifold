@@ -33,7 +33,7 @@ export default function Home() {
   const [targetCameraPosition, setTargetCameraPosition] = useState<[number, number, number] | null>(null);
   const [targetSpherical, setTargetSpherical] = useState<{ theta: number; phi: number } | null>(null);
   const [cameraRotation, setCameraRotation] = useState({ theta: 0, phi: Math.PI / 2 });
-  const [showAxes, setShowAxes] = useState(true);
+  const [showAxes, setShowAxes] = useState(false);
   const [showGrid, setShowGrid] = useState(true);
   const [showViewCube, setShowViewCube] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -56,8 +56,6 @@ export default function Home() {
     currentStage,
     progress,
     glbUrl,
-    splatUrl,
-    renderMode,
     startStream,
     cancelStream,
   } = useSAM3DStream();
@@ -156,23 +154,10 @@ export default function Home() {
       {/* Empty state */}
       {voxels.length === 0 && !meshData && !glbData && !isStreaming && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="text-center text-zinc-600 -mt-20">
-            <svg
-              className="w-24 h-24 mx-auto mb-4 opacity-15"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={0.5}
-                d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"
-              />
-            </svg>
-            <p className="text-sm font-medium mb-1 text-zinc-500">Ready to create</p>
-            <p className="text-xs text-zinc-600">
-              Upload an image or describe what you want
+          <div className="text-center -mt-20">
+            <div className="w-3 h-3 mx-auto mb-4 rounded-full bg-zinc-700 shadow-[0_0_20px_4px_rgba(82,82,91,0.3)]" />
+            <p className="text-xs text-zinc-600 tracking-widest uppercase">
+              Upload an image or describe what you want...
             </p>
           </div>
         </div>

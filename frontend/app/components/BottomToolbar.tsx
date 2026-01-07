@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { fal } from "@fal-ai/client";
 
 // Configure fal to use our proxy
@@ -34,9 +34,20 @@ export default function BottomToolbar({
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [uploadedImagePreview, setUploadedImagePreview] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [imageGenStatus, setImageGenStatus] = useState<"queued" | "generating" | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isEnhancingPrompt, setIsEnhancingPrompt] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = "auto";
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
+    }
+  }, [prompt]);
 
   const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -62,6 +73,14 @@ export default function BottomToolbar({
     setUploadedImagePreview(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
+    }
+  }, []);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      const form = e.currentTarget.form;
+      if (form) form.requestSubmit();
     }
   }, []);
 
@@ -128,6 +147,7 @@ export default function BottomToolbar({
 
     // Generate image (don't show preview - it's intermediate)
     setIsGeneratingImage(true);
+    setImageGenStatus("queued");
     let generatedImageUrl: string | null = null;
     
     try {
@@ -139,6 +159,13 @@ export default function BottomToolbar({
           num_images: 1,
           enable_safety_checker: true,
         },
+        onQueueUpdate: (update) => {
+          if (update.status === "IN_QUEUE") {
+            setImageGenStatus("queued");
+          } else if (update.status === "IN_PROGRESS") {
+            setImageGenStatus("generating");
+          }
+        },
       });
       
       generatedImageUrl = result.data?.images?.[0]?.url || null;
@@ -149,9 +176,11 @@ export default function BottomToolbar({
     } catch (error) {
       console.error("Failed to generate image:", error);
       setIsGeneratingImage(false);
+      setImageGenStatus(null);
       return;
     }
     setIsGeneratingImage(false);
+    setImageGenStatus(null);
 
     // Start SAM-3D with generated image
     onStart(generatedImageUrl, segmentationPrompt);
@@ -162,7 +191,7 @@ export default function BottomToolbar({
   const hasUploadedImage = !!uploadedImageUrl;
 
   return (
-    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-lg px-4">
+    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-xl px-4">
       <form onSubmit={handleSubmit}>
         <div className="flex items-end gap-2">
           {/* Input container with image preview */}
@@ -199,7 +228,7 @@ export default function BottomToolbar({
             )}
 
             {/* Input row */}
-            <div className="flex items-center gap-2 p-2">
+            <div className="flex items-end gap-2 p-2">
               {/* Upload button */}
               <input
                 ref={fileInputRef}
@@ -219,14 +248,16 @@ export default function BottomToolbar({
                 </svg>
               </button>
 
-              {/* Text input */}
-              <input
-                type="text"
+              {/* Auto-resizing textarea */}
+              <textarea
+                ref={textareaRef}
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
+                onKeyDown={handleKeyDown}
                 placeholder={hasUploadedImage ? "What to extract? (optional)" : "Describe what to create..."}
                 disabled={isProcessing}
-                className="flex-1 bg-transparent border-none outline-none text-sm text-zinc-100 placeholder:text-zinc-600 disabled:opacity-50"
+                rows={1}
+                className="flex-1 bg-transparent border-none outline-none text-sm text-zinc-100 placeholder:text-zinc-600 disabled:opacity-50 resize-none leading-relaxed py-1.5 min-h-[28px] max-h-[120px]"
               />
 
               {/* Status */}
@@ -237,7 +268,7 @@ export default function BottomToolbar({
                     {isEnhancingPrompt 
                       ? "analyzing" 
                       : isGeneratingImage 
-                        ? "generating" 
+                        ? (imageGenStatus === "queued" ? "queued" : "generating")
                         : currentStage?.replace("_", " ") || "processing"}
                   </span>
                   {isStreaming && <span>{Math.round(progress)}%</span>}
@@ -317,7 +348,7 @@ export default function BottomToolbar({
         {/* Helper text */}
         {!isProcessing && !hasUploadedImage && (
           <p className="text-[10px] text-zinc-700 text-center mt-2">
-            upload an image or describe what you want
+            upload an image or describe what you want · enter to submit · shift+enter for new line
           </p>
         )}
       </form>

@@ -83,9 +83,9 @@ function VoxelPoints({ voxels }: VoxelPointsProps) {
       colors[i * 3 + 2] = isBlack ? 1.0 : v.b / 255;
     }
 
-    // Second pass: shift Y so the bottom sits on the grid (y=0)
+    // Second pass: shift Y so the bottom sits on the platform
     for (let i = 0; i < voxels.length; i++) {
-      positions[i * 3 + 1] -= minYAfterTransform;
+      positions[i * 3 + 1] -= minYAfterTransform - PLATFORM_Y;
     }
 
     return { positions, colors };
@@ -172,9 +172,9 @@ function MeshPreview({ meshData }: MeshPreviewProps) {
       minY = Math.min(minY, newY);
     }
     
-    // Second pass: shift so bottom sits on grid (y=0)
+    // Second pass: shift so bottom sits on the platform
     for (let i = 0; i < positions.count; i++) {
-      positions.setY(i, positions.getY(i) - minY);
+      positions.setY(i, positions.getY(i) - minY + PLATFORM_Y);
     }
     
     positions.needsUpdate = true;
@@ -240,8 +240,8 @@ function GLBViewer({ glbData }: GLBViewerProps) {
       
       // Calculate scaled bounding box to find where bottom is
       const scaledMinY = (box.min.y - center.y) * scale;
-      // Shift up so bottom sits on grid (y=0)
-      wrapper.position.y = -scaledMinY;
+      // Shift so bottom sits on the platform
+      wrapper.position.y = -scaledMinY + PLATFORM_Y;
       
       setScene(wrapper);
     }, (error) => {
@@ -339,6 +339,9 @@ function CameraController({
 
   return null;
 }
+
+// Platform height - lower value = more room for tall models
+const PLATFORM_Y = -0.3;
 
 interface VoxelViewerProps {
   voxels: Voxel[];
@@ -442,10 +445,10 @@ export default function VoxelViewer({
           autoRotate={autoRotate}
           autoRotateSpeed={1}
         />
-        {showGrid && <gridHelper args={[2, 20, "#333", "#222"]} position={[0, -0.01, 0]} />}
+        {showGrid && <gridHelper args={[2, 20, "#333", "#222"]} position={[0, PLATFORM_Y - 0.01, 0]} />}
         
         {/* XYZ Axis Helper - Red=X, Green=Y, Blue=Z */}
-        {showAxes && <axesHelper args={[1]} />}
+        {showAxes && <axesHelper args={[0.5]} position={[0, PLATFORM_Y, 0]} />}
       </Canvas>
     </div>
   );
