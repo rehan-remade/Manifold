@@ -348,6 +348,7 @@ interface VoxelViewerProps {
   meshData?: MeshData | null;
   glbData?: ArrayBuffer | null;
   autoRotate?: boolean;
+  autoRotateSpeed?: number;
   targetCameraPosition?: [number, number, number] | null;
   targetSpherical?: { theta: number; phi: number } | null;
   onCameraRotationChange?: (rotation: { theta: number; phi: number }) => void;
@@ -360,6 +361,7 @@ export default function VoxelViewer({
   meshData = null, 
   glbData = null, 
   autoRotate = false,
+  autoRotateSpeed = 1,
   targetCameraPosition = null,
   targetSpherical = null,
   onCameraRotationChange,
@@ -443,7 +445,7 @@ export default function VoxelViewer({
           minDistance={0.5}
           maxDistance={10}
           autoRotate={autoRotate}
-          autoRotateSpeed={1}
+          autoRotateSpeed={autoRotateSpeed}
         />
         {showGrid && <gridHelper args={[2, 20, "#333", "#222"]} position={[0, PLATFORM_Y - 0.01, 0]} />}
         

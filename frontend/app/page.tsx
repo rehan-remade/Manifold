@@ -36,6 +36,8 @@ export default function Home() {
   const [showAxes, setShowAxes] = useState(false);
   const [showGrid, setShowGrid] = useState(true);
   const [showViewCube, setShowViewCube] = useState(true);
+  const [autoRotate, setAutoRotate] = useState(false);
+  const [autoRotateSpeed, setAutoRotateSpeed] = useState(1);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   
   const handleViewChange = useCallback((position: [number, number, number]) => {
@@ -68,7 +70,8 @@ export default function Home() {
           voxels={voxels}
           meshData={meshData}
           glbData={glbData}
-          autoRotate={false}
+          autoRotate={autoRotate}
+          autoRotateSpeed={autoRotateSpeed}
           targetCameraPosition={targetCameraPosition}
           targetSpherical={targetSpherical}
           onCameraRotationChange={setCameraRotation}
@@ -121,6 +124,39 @@ export default function Home() {
                   </div>
                   <span className="text-zinc-300">View Cube</span>
                 </button>
+                
+                {/* Divider */}
+                <div className="h-px bg-zinc-700/50 my-1" />
+                
+                {/* Auto Rotate Toggle */}
+                <button
+                  onClick={() => setAutoRotate(!autoRotate)}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-zinc-800/80 transition-colors text-xs"
+                >
+                  <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center transition-colors ${autoRotate ? 'bg-green-500 border-green-500' : 'border-zinc-600'}`}>
+                    {autoRotate && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                  </div>
+                  <span className="text-zinc-300">Auto Rotate</span>
+                </button>
+                
+                {/* Speed Slider - only visible when auto-rotate is on */}
+                {autoRotate && (
+                  <div className="px-2 py-1.5">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] text-zinc-500">Speed</span>
+                      <span className="text-[10px] text-zinc-400 tabular-nums">{autoRotateSpeed.toFixed(1)}x</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="5"
+                      step="0.1"
+                      value={autoRotateSpeed}
+                      onChange={(e) => setAutoRotateSpeed(parseFloat(e.target.value))}
+                      className="w-full h-1 bg-zinc-700 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-zinc-300 [&::-webkit-slider-thumb]:hover:bg-white [&::-webkit-slider-thumb]:transition-colors"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           )}
