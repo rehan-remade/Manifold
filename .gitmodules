@@ -1,3 +1,6 @@
 [submodule "sam-3d"]
 	path = sam-3d
 	url = git@github.com:rehan-remade/sam-3d-objects.git
+[submodule "trellis-2"]
+	path = trellis-2
+	url = git@github.com:rehan-remade/TRELLIS.2.git
