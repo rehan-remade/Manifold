@@ -9,3 +9,14 @@ __pycache__/
 *.pyzw
 *.pyzwz
 *.pyzwzw
+*.egg-info/
+*.egg
+*.eggs/
+*.eggs.zip
+*.eggs.tar.gz
+*.eggs.tar.bz2
+*.eggs.tar.xz
+*.eggs.tar.lzma
+*.eggs.tar.lz
+*.eggs.tar.lz4
+*.eggs.tar.zst
