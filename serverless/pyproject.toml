@@ -9,7 +9,6 @@ where = ["."]
 name = "sam3d-stream"
 version = "0.1.0"
 description = "SAM-3D streaming endpoint for real-time 3D reconstruction visualization"
-readme = "../README.md"
 requires-python = ">=3.11"
 dependencies = [
     "fal>=0.14.0",
@@ -25,4 +24,5 @@ dev = [
 
 [tool.fal.apps]
 sam-3d-stream = { auth = "shared", ref = "app.py::SAM3DStreamApp" }
+trellis-2-stream = { auth = "shared", ref = "trellis2_app.py::Trellis2StreamApp" }
 
