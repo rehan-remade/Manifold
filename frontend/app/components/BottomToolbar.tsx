@@ -3,7 +3,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { fal } from "@fal-ai/client";
 
-// Configure fal to use our proxy
 fal.config({
   proxyUrl: "/api/fal/proxy",
 });
@@ -58,7 +57,11 @@ export default function BottomToolbar({
     setIsUploading(true);
 
     try {
-      const url = await fal.storage.upload(file);
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/fal/upload", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Upload failed");
+      const { url } = await res.json();
       setUploadedImageUrl(url);
     } catch (error) {
       console.error("Failed to upload image:", error);
@@ -167,7 +170,7 @@ export default function BottomToolbar({
           }
         },
       });
-      
+
       generatedImageUrl = result.data?.images?.[0]?.url || null;
       
       if (!generatedImageUrl) {
